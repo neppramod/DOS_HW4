@@ -13,6 +13,10 @@ enum {
 
 #define PORT_FILE_NAME "portnums"
 #define NEIGHBORS_FILE_LIST_NAME "neighbors" // Neighbors list file
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 5024
+#define FILE_SEARCH_DIRECTORY  "content"
+#define MAX_NEIGHBORS_NODE_SIZE 100     // max size of neighbor
+#define TRUE 1
+#define FALSE 0
 
 #endif

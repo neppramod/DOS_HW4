@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
         {
             strcpy(neighbors_list[node_index].host_name,neighbor_host);
             strcpy(neighbors_list[node_index].host_port,neighbor_port);
-            node_index++;
 
+            node_index++;
         }
 
     } else {

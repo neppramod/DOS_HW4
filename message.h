@@ -14,7 +14,7 @@ struct serviceRequest
     char requestString[32]; // Parameters of request
     int requestID;		// Unique ID
     char payload[256];	// Other request information, to be determined
-    char message[512];  // message transferred
+    char message[512];  // message transferred    
 };
 
 #endif // MESSAGE_H
