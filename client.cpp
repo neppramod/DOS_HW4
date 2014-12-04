@@ -193,6 +193,23 @@ void Client::searchForAFileInNeighbor()
 // Search for a file recursively from node selected in chooseANeighbor method
 void Client::searchForAFileRecursively()
 {
+    char filename[BUFFER_SIZE];
+    cout << "Enter file name:";
+    cin >> filename;
+
+    int connect = -1;
+
+    for (int i = 0; i < node_index; i++) {
+        connect = connectToANode(neighbors_list[i].host_name,
+                               neighbors_list[i].host_port);
+        strcpy(serviceRequestMessage.requestString, "recursivelookup");
+                    strcpy(serviceRequestMessage.payload, filename);
+                    serviceRequestMessage.requestType = CLIENT_QUERY_REQUEST;
+
+        if (connect == 0) {
+            write(sockdesc, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+        }
+    }
 
 }
 

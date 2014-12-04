@@ -1,6 +1,7 @@
 #ifndef DFS_H
 #define DFS_H
 
+/*
 class Dfs
 {
 public:
@@ -14,4 +15,5 @@ public:
 
 };
 
+*/
 #endif // DFS_H

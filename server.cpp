@@ -60,6 +60,7 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
               } else if (strcmp(serviceRequestMessage->requestString, "lookup") == 0) { // lookup file
 
+
                 char complete_file_name[BUFFER_SIZE];
                 strcat(complete_file_name, FILE_SEARCH_DIRECTORY);
                 strcat(complete_file_name, "/");
@@ -92,7 +93,62 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
                 write(connection, (char *) serviceRequestMessage, sizeof(serviceRequest));
 
+            } else if (strcmp(serviceRequestMessage->requestString, "recursivelookup") == 0) {
+
+                value = read (connection, (char *) serviceRequestMessage, sizeof (serviceRequest));
+                cout << "Server: client sent: " << serviceRequestMessage->requestString << endl;
+
+                int connect = -1;
+
+                char *file_content = searchFile(serviceRequestMessage->payload);
+
+                if (file_content != NULL) { // If found
+                    cout << "Found " << serviceRequestMessage->payload << endl;
+                    cout << "File conent: " << file_content << endl;
+                    strcpy(serviceRequestMessage->requestString, "found");
+                    strcpy(serviceRequestMessage->payload, file_content);
+
+                    serviceRequestMessage->requestType = SERVER_RESPONSE_REQUEST;
+
+                    write(connection, (char *) serviceRequestMessage, sizeof(serviceRequest));
+
+                } else {
+
+                    int connect = -1;
+                    int found =0;
+
+                    for (int i = 0; i < node_index; i++) {
+
+                        if (!findVisited(serviceRequestMessage, neighbors_list[i].host_name,
+                                         neighbors_list[i].host_port)) {
+
+                            connect = client.connectToANode(neighbors_list[i].host_name,
+                                                   neighbors_list[i].host_port);
+                            strcpy(serviceRequestMessage->requestString, "recursivelookup");
+                            //strcpy(serviceRequestMessage.payload, filename);
+                            serviceRequestMessage->requestType = CLIENT_QUERY_REQUEST;
+
+
+                            if (connect == 0) {
+                                char tmp_ip_port[BUFFER_SIZE];
+                                sprintf(tmp_ip_port, "%s;%s;", neighbors_list[i].host_name,
+                                        neighbors_list[i].host_port);
+
+                                strcat(serviceRequestMessage->visitedNodeList, tmp_ip_port);
+                                write(connect, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+                                found =1;
+                            } else if (connect == -1 ) {
+
+                                found =0;
+                            }
+                        }
+                    }
+                   cout << "File not found" << endl;
+                }
             }
+
+
+
         } else if (requestType == CLIENT_PAYLOAD_SHARE) {
             cout << "Server: (payload) : " << serviceRequestMessage->payload << endl;
 
@@ -154,3 +210,60 @@ void Server::update_list(char *payload)
     }
 }
 
+
+char *Server::searchFile(char *fileName)
+{
+
+    char complete_file_name[BUFFER_SIZE];
+    //char file_content[BUFFER_SIZE];
+    char file_conent[BUFFER_SIZE];
+    strcat(complete_file_name, FILE_SEARCH_DIRECTORY);
+    strcat(complete_file_name, "/");
+    strcat(complete_file_name, fileName);
+
+
+    FILE *search_file;
+
+    Logger::log("File path: %s\n", complete_file_name);
+
+    if (search_file = fopen(complete_file_name, "r")) { // file exists
+        char file_buffer[1024];
+
+        while (fgets(file_buffer, sizeof file_buffer, search_file) != NULL) {
+            strcat(file_conent, file_buffer);
+        }
+
+        fclose(search_file);
+    }
+
+    return file_conent;
+}
+
+
+int Server::findVisited(serviceRequest *request, char *host, char *port)
+{
+    int found = 0;
+    char **tokens;
+    tokens = utility.str_split(request->visitedNodeList, ';');
+
+    if (tokens) {
+        int i, j;
+
+        for (i = 1; *(tokens + i); i += 2) {
+            neighbors tmp_neighbors;
+
+            found = 0;
+
+            strcpy(tmp_neighbors.host_name, *(tokens + i));
+            strcpy(tmp_neighbors.host_port, *(tokens + (i+1)));
+
+            if ((strcmp(tmp_neighbors.host_name, host) == 0) &&
+                    (strcmp(tmp_neighbors.host_port, port) == 0)) {
+                found = 1;
+                break;
+            }
+        }
+    }
+
+    return found;
+}

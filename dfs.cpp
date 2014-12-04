@@ -1,6 +1,7 @@
 #include "dfs.h"
 #include "dfs.h"
 
+/*
 Dfs::Dfs()
 {
 }
@@ -15,3 +16,4 @@ void Dfs::initialize_search()
     }
 
 }
+*/
