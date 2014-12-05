@@ -130,6 +130,7 @@ void server_thread_handler(void *connection) {
 
 void *server_handler(void *conn)
 {
+  cout << "I am inside server_handler" << endl;
     Server server;                          // Few utilities of server
     //server.start(conn);
     server.start(conn,neighbors_list,node_index);

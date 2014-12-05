@@ -27,6 +27,8 @@ Server::Server() {
 
 void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
+  cout << "I am inside start";
+
     int value;                                  // Return value from read
     serviceRequest *serviceRequestMessage;      // Service request message object
     int connection = *((int *) conn);
@@ -68,10 +70,10 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
                 serviceRequestMessage->requestType = SERVER_RESPONSE_REQUEST;
 
-                Logger::log("File path: %s\n", complete_file_name);
+                //Logger::log("File path: %s\n", complete_file_name);
                 FILE *search_file;
 
-                Logger::log("File path: %s\n", complete_file_name);
+                //Logger::log("File path: %s\n", complete_file_name);
 
                 if (search_file = fopen(complete_file_name, "r")) { // file exists
                     char file_buffer[1024];
@@ -99,18 +101,23 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
                 cout << "I am in recursive lookup" << endl;
 
                 //value = read (connection, (char *) serviceRequestMessage, sizeof (serviceRequest));
-                cout << "Server: client sent: " << serviceRequestMessage->requestString << endl;
+                //cout << "Server: client sent: " << serviceRequestMessage->requestString << endl;
 
                 //int connect = -1;
                 cout << "Before" << endl;
                 char *file_content = searchFile(serviceRequestMessage->payload);
-                cout << "After" << endl;
-                Logger::log("File content: %s",file_content);
 
-                if (sizeof(file_content) > 0) { // If found
+                cout << "After" << endl;
+                //Logger::log("File content: %s",file_content);
+
+                //Logger::log("File size: %d\n", strlen(file_content));
+
+                if (strlen(file_content) > 0) { // If found
+
                     cout << "Found " << serviceRequestMessage->payload << endl;
                     cout << "File conent: " << file_content << endl;
                     strcpy(serviceRequestMessage->requestString, "found");
+                    //strcpy(serviceRequestMessage->payload, file_content);
                     strcpy(serviceRequestMessage->payload, file_content);
 
                     serviceRequestMessage->requestType = SERVER_RESPONSE_REQUEST;
@@ -118,40 +125,86 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
                     write(connection, (char *) serviceRequestMessage, sizeof(serviceRequest));
 
                 } else {
-                    Logger::log("I did not find the file in server while you sent me serarchForAFileRecursively");
-                    /*
+                    cout << "I am in else";
 
-                    int connect = -1;
-                    int found =0;
+
+                    cout << "Hello world" << endl;
+                    cout << "Visited list is '"  << serviceRequestMessage->visitedNodeList << "'" << endl;
+
+
+
+                    int conn_for = -1;
 
                     for (int i = 0; i < node_index; i++) {
 
-                        if (!findVisited(serviceRequestMessage, neighbors_list[i].host_name,
-                                         neighbors_list[i].host_port)) {
+                        if (findVisited (serviceRequestMessage->visitedNodeList, neighbors_list[i].host_name, neighbors_list[i].host_port) == 1) {
+                            cout << "Matched. Let's find another to connect to" << endl;
+                          } else {
+                            cout << "Not matched. Ready to connect to " << neighbors_list[i].host_port << " it to recursively search file" << endl;
 
-                            connect = client.connectToANode(neighbors_list[i].host_name,
-                                                   neighbors_list[i].host_port);
-                            strcpy(serviceRequestMessage->requestString, "recursivelookup");
-                            //strcpy(serviceRequestMessage.payload, filename);
-                            serviceRequestMessage->requestType = CLIENT_QUERY_REQUEST;
+                            // Start recursive connection
+
+                            serviceRequest forwardRequestMessage;
+
+                            strcpy(forwardRequestMessage.payload, serviceRequestMessage->payload);
+                            strcpy(forwardRequestMessage.requestString, "recursivelookup");
+                            forwardRequestMessage.requestType = CLIENT_QUERY_REQUEST;
+
+                            // continue previous message
+                            strcpy(forwardRequestMessage.visitedNodeList, serviceRequestMessage->visitedNodeList);
+                            strcat(forwardRequestMessage.visitedNodeList, ";");
+
+                            // append this node for DFS
+                            strcat(forwardRequestMessage.visitedNodeList, neighbors_list[i].host_name);
+                            strcat(forwardRequestMessage.visitedNodeList, ";");
+                            strcat(forwardRequestMessage.visitedNodeList, neighbors_list[i].host_port);
 
 
-                            if (connect == 0) {
-                                char tmp_ip_port[BUFFER_SIZE];
-                                sprintf(tmp_ip_port, "%s;%s;", neighbors_list[i].host_name,
-                                        neighbors_list[i].host_port);
+                            Communication *communication = Communication::commucationInstance ();
+                            int for_sockdesc;
+                            communication->create_socket_descriptor (&for_sockdesc);
 
-                                strcat(serviceRequestMessage->visitedNodeList, tmp_ip_port);
-                                write(connect, (char *)&serviceRequestMessage, sizeof(serviceRequest));
-                                found =1;
-                            } else if (connect == -1 ) {
+                            conn_for = communication->create_client_connection (&for_sockdesc, neighbors_list[i].host_name, neighbors_list[i].host_port);
 
-                                found =0;
-                            }
-                        }
-                    }
-                   cout << "File not found" << endl;
-                   */
+                            if (conn_for == 0) {
+                                cout << "Successfully connected to " << neighbors_list[i].host_name << " " << neighbors_list[i].host_port << endl;
+
+
+                                cout << "Writing " << forwardRequestMessage.payload << " to this new server" << endl;
+
+                                write(conn_for, (char *) &forwardRequestMessage, sizeof(serviceRequest));
+
+                                cout << "Now i will read from this server" << endl;
+                                int val1 = read(conn_for, (char *) &forwardRequestMessage, sizeof(serviceRequest));
+
+                                if (val1 != sizeof(serviceRequest)) {
+                                    cout << "This new server sent bad value" << endl;
+                                  }
+
+                               // cout << "This new server sent file content as: " << forwardRequestMessage.payload << endl;
+                               // cout <<"Request string is now " << forwardRequestMessage.requestString;
+
+                                if (strcmp(forwardRequestMessage.requestString, "found") == 0) {
+                                    cout << "Found in this server " << endl;
+                                    break;
+                                  }
+
+                              } else if (conn_for == -1) {
+                              continue;
+                              }
+
+                            // End the recursive connection
+                          }
+                      }
+
+                    if (conn_for == -1) {
+                        cout << "Conn_for is still negative" << endl;
+                      } else {
+                        cout << "Conn_for was 0" << endl;
+                      }
+
+
+
                 }
             }
 
@@ -235,43 +288,78 @@ char *Server::searchFile(char *fileName)
     Logger::log("File path: %s\n", complete_file_name);
 
     if (search_file = fopen(complete_file_name, "r")) { // file exists
+        //Logger::log("I am inside file found");
+
+        cout << "File found" << endl;
         char file_buffer[1024];
 
         while (fgets(file_buffer, sizeof file_buffer, search_file) != NULL) {
             strcat(file_conent, file_buffer);
-            cout << "Content of file: " << file_conent;
+            //cout << "Content of file: " << file_conent;
         }
 
+        cout << "Content of file: " << file_conent;
+
         fclose(search_file);
-    }
+    } else { // file does not exist
+        //Logger::log("I am inside file does not exist");
+        cout << "File does not exist" << endl;
+        strcpy(file_conent, "");
+      }
 
     return file_conent;
 }
 
 
-int Server::findVisited(serviceRequest *request, char *host, char *port)
+int Server::findVisited(char *buffer, char *host, char *port)
 {
     int found = 0;
-    char **tokens;
-    tokens = utility.str_split(request->visitedNodeList, ';');
 
-    if (tokens) {
-        int i, j;
+    string visitedList(buffer);
+    string hostStr(host);
+    string portStr(port);
 
-        for (i = 1; *(tokens + i); i += 2) {
-            neighbors tmp_neighbors;
+    cout << "Trying to match '" << visitedList << "' with '" << hostStr << ";" << portStr << "'" << endl;
 
-            found = 0;
+    //char* buffer = "this*is*a*simple*test";
+    string delimiter = ";";
+    string s(buffer);
+    size_t pos = 0;
+    string token;
 
-            strcpy(tmp_neighbors.host_name, *(tokens + i));
-            strcpy(tmp_neighbors.host_port, *(tokens + (i+1)));
+    int i = 0; // toggle to set host or port
 
-            if ((strcmp(tmp_neighbors.host_name, host) == 0) &&
-                    (strcmp(tmp_neighbors.host_port, port) == 0)) {
-                found = 1;
-                break;
-            }
-        }
+    string hostFound = "";
+    string portFound = "";
+
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+            token = s.substr(0, pos);
+            cout<<token<<endl;
+            s.erase(0, pos + delimiter.length());
+
+            if (i == 0) {
+                //hostFound = token;
+                if (hostStr  == token)
+                  hostFound = token;
+
+                ++i;
+              } else if (i == 1) {
+
+                if (portStr == token)
+                  portFound = token;
+
+                --i;
+              }
+    }
+
+//    cout<< "End: " << s<<endl;
+
+    if (portStr == s)
+      portFound = s;
+
+    if (hostFound != "" && portFound != "") {
+      cout << "Matched " << hostFound << ";" << portFound << endl;
+      found = 1;
     }
 
     return found;

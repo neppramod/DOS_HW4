@@ -22,7 +22,7 @@ public:
     void start(void *conn, neighbors *neighbors_list, int node_index);
     void update_list(char *payload, neighbors *neighbors_list, int node_index);
     char* searchFile(char *fileName);   // search for a file node
-    int findVisited(serviceRequest *request, char *host, char *port);      // find unique host and port
+    int findVisited(char *buffer, char *host, char *port);      // find unique host and port
 };
 
 #endif
