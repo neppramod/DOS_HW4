@@ -118,6 +118,8 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
                     write(connection, (char *) serviceRequestMessage, sizeof(serviceRequest));
 
                 } else {
+                    Logger::log("I did not find the file in server while you sent me serarchForAFileRecursively");
+                    /*
 
                     int connect = -1;
                     int found =0;
@@ -149,6 +151,7 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
                         }
                     }
                    cout << "File not found" << endl;
+                   */
                 }
             }
 
