@@ -208,6 +208,7 @@ void Client::searchForAFileRecursively()
 
         if (connect == 0) {
             write(sockdesc, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+            cout << "Sending first node" << endl;
         }
     }
 

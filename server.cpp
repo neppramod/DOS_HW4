@@ -68,7 +68,7 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
                 serviceRequestMessage->requestType = SERVER_RESPONSE_REQUEST;
 
-
+                Logger::log("File path: %s\n", complete_file_name);
                 FILE *search_file;
 
                 Logger::log("File path: %s\n", complete_file_name);
@@ -95,14 +95,19 @@ void Server::start(void *conn, neighbors *neighbors_list, int node_index) {
 
             } else if (strcmp(serviceRequestMessage->requestString, "recursivelookup") == 0) {
 
-                value = read (connection, (char *) serviceRequestMessage, sizeof (serviceRequest));
+
+                cout << "I am in recursive lookup" << endl;
+
+                //value = read (connection, (char *) serviceRequestMessage, sizeof (serviceRequest));
                 cout << "Server: client sent: " << serviceRequestMessage->requestString << endl;
 
-                int connect = -1;
-
+                //int connect = -1;
+                cout << "Before" << endl;
                 char *file_content = searchFile(serviceRequestMessage->payload);
+                cout << "After" << endl;
+                Logger::log("File content: %s",file_content);
 
-                if (file_content != NULL) { // If found
+                if (sizeof(file_content) > 0) { // If found
                     cout << "Found " << serviceRequestMessage->payload << endl;
                     cout << "File conent: " << file_content << endl;
                     strcpy(serviceRequestMessage->requestString, "found");
@@ -231,6 +236,7 @@ char *Server::searchFile(char *fileName)
 
         while (fgets(file_buffer, sizeof file_buffer, search_file) != NULL) {
             strcat(file_conent, file_buffer);
+            cout << "Content of file: " << file_conent;
         }
 
         fclose(search_file);
