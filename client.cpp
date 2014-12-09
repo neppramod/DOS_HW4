@@ -5,6 +5,7 @@
 #include "logger.h"
 #include "constants.h"
 #include <iostream>
+#include <list>
 
 #define PAYLOAD_LIMIT 3
 
@@ -99,7 +100,7 @@ void Client::start(int srv_port_num) {
 void Client::displayNeighbors()
 {
     if (node_index < 1) {
-        cout << "Neighbors empty. Please create a neighbors file first";
+        cout << "Client: Neighbors empty. Please create a neighbors file first";
     } else {
         for (int i = 0; i < node_index; i++) {
             cout << (i + 1)
@@ -197,26 +198,89 @@ void Client::searchForAFileRecursively()
   cout << "Enter file name:";
   cin >> filename;
 
-  if(selected_neighbor.host_name != NULL) {
-      // Ping the server with request type 2
-      serviceRequestMessage.requestType = CLIENT_QUERY_REQUEST;
-      strcpy(serviceRequestMessage.payload, filename);
-      strcpy(serviceRequestMessage.requestString, "recursivelookup");
+  list<string> active_host_port;
 
 
-      write(sockdesc, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+  // Ping the server with request type 2
+  serviceRequestMessage.requestType = CLIENT_QUERY_REQUEST;
+  strcpy(serviceRequestMessage.payload, filename);
+  strcpy(serviceRequestMessage.requestString, "recursivelookup");
 
-      value = read(sockdesc, (char *) &serviceRequestMessage, sizeof(serviceRequest));
-      cout << "Client: server sent: " << serviceRequestMessage.requestString << endl;
-      if(strcmp(serviceRequestMessage.requestString, "found") == 0) {
-          cout << "Client: File content: " << serviceRequestMessage.payload << endl;
-      }
-  }
+
+  // Implement the visited list also
+  strcpy(serviceRequestMessage.visitedNodeList, selected_neighbor.host_name);
+  strcat(serviceRequestMessage.visitedNodeList, ";");
+  strcat(serviceRequestMessage.visitedNodeList, selected_neighbor.host_port);
+
+
+  write(sockdesc, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+
+
+  value = read(sockdesc, (char *) &serviceRequestMessage, sizeof(serviceRequest));
+  cout << "Client: Data returned from the node: " << serviceRequestMessage.payload << endl;
+
+
 }
 
 // Display active nodes in the system
 void Client::displayActiveNodesInTheSystem()
 {
+  list<neighbors> active_neighbors;
+
+
+
+  for (int i = 0; i < node_index; i++) {
+      createSocketDescriptor();
+      int conn = -1;
+
+      conn = communication->create_client_connection(&sockdesc,neighbors_list[i].host_name,neighbors_list[i].host_port);
+
+
+      if (conn == 0) {
+
+
+          neighbors tmp_neighbor;
+
+          // We got a connection, we can add it to active list
+          strcpy(tmp_neighbor.host_name, neighbors_list[i].host_name);
+          strcpy(tmp_neighbor.host_port, neighbors_list[i].host_port);
+
+          active_neighbors.push_back(tmp_neighbor);
+
+          serviceRequestMessage.requestType = CLIENT_QUERY_REQUEST;
+          strcpy(serviceRequestMessage.requestString, "returnneighbors");
+          strcpy(serviceRequestMessage.visitedNodeList, neighbors_list[i].host_name);
+          strcat(serviceRequestMessage.visitedNodeList, ";");
+          strcpy(serviceRequestMessage.visitedNodeList, neighbors_list[i].host_port);
+          strcat(serviceRequestMessage.visitedNodeList, ";");
+
+          write(sockdesc, (char *)&serviceRequestMessage, sizeof(serviceRequest));
+          value = read(sockdesc, (char *) &serviceRequestMessage, sizeof(serviceRequest));
+
+          cout << " " << serviceRequestMessage.payload;
+        }
+  }
+
+  cout << "Active node size: " << active_neighbors.size();
+
+  while (!active_neighbors.empty ()) {
+      neighbors tmp_neighbors;
+      tmp_neighbors = active_neighbors.front ();
+      cout << endl << "Host: " << tmp_neighbors.host_name << " , Port: " << tmp_neighbors.host_port << endl;
+      active_neighbors.pop_front ();
+    }
+
+  /*
+  list<neighbors>::iterator iter;
+  iter = active_neighbors.begin ();
+
+  while (iter != active_neighbors.end ()) {
+      neighbors prnt_neighbor = (*iter);
+      cout << "Host: " << prnt_neighbor.host_name << ", Port: "<< prnt_neighbor.host_port;
+
+    }
+
+    */
 
 }
 
